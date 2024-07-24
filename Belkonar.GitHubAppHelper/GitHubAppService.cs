@@ -11,16 +11,15 @@ namespace Belkonar.GitHubAppHelper;
 public interface IGitHubAppService
 {
     Task<string> GetInstallationToken(GitHubAppConfig config);
-    Task<string> GetTokenResponse(string tokenUrl, string token);
-    Task<string> GetTokenUrl(GitHubAppConfig config, string token);
-    string GetJwt(GitHubAppConfig config, byte[] key);
 }
 
 public class GitHubAppService(IHttpClientFactory httpFactory) : IGitHubAppService
 {
-    private readonly HttpClient _client = httpFactory.CreateClient("gha");
     public async Task<string> GetInstallationToken(GitHubAppConfig config)
     {
+        // Normally I'd put this in a constructor, but the thing using this is basically a singleton.
+        var client = httpFactory.CreateClient("gha");
+        
         if (config.GitHubAppPem == null)
         {
             throw new Exception("GitHubAppPem is required");
@@ -39,12 +38,12 @@ public class GitHubAppService(IHttpClientFactory httpFactory) : IGitHubAppServic
         
         var jwt = GetJwt(config, key);
         
-        var tokenUrl = await GetTokenUrl(config, jwt);
+        var tokenUrl = await GetTokenUrl(config, jwt, client);
         
-        return await GetTokenResponse(tokenUrl, jwt);
+        return await GetTokenResponse(tokenUrl, jwt, client);
     }
     
-    public async Task<string> GetTokenResponse(string tokenUrl, string token)
+    public async Task<string> GetTokenResponse(string tokenUrl, string token, HttpClient client)
     {
         using var request = new HttpRequestMessage();
         
@@ -52,7 +51,7 @@ public class GitHubAppService(IHttpClientFactory httpFactory) : IGitHubAppServic
         request.Method = HttpMethod.Post;
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        using var response = await _client.SendAsync(request);
+        using var response = await client.SendAsync(request);
 
         var tokenResponse = await response.Content.ReadFromJsonAsync<JsonDocument>();
         var realToken = tokenResponse?.RootElement.GetProperty("token").GetString();
@@ -65,13 +64,13 @@ public class GitHubAppService(IHttpClientFactory httpFactory) : IGitHubAppServic
         return realToken;
     }
     
-    public async Task<string> GetTokenUrl(GitHubAppConfig config, string token)
+    public async Task<string> GetTokenUrl(GitHubAppConfig config, string token, HttpClient client)
     {
         using var request = new HttpRequestMessage();
         request.RequestUri = new Uri($"{config.GitHubUri}/app/installations");
         request.Headers.Authorization = new AuthenticationHeaderValue("bearer", token);
 
-        using var response = await _client.SendAsync(request);
+        using var response = await client.SendAsync(request);
 
         var installations = await response.Content.ReadFromJsonAsync<JsonDocument>();
         
