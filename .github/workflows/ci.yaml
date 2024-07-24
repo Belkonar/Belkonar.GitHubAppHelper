@@ -11,4 +11,4 @@ jobs:
         with:
           dotnet-version: '8'
           dotnet-quality: 'ga'
-      - run: echo dotnet --list-sdks
+      - run: dotnet --list-sdks
