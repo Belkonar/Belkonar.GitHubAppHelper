@@ -19,7 +19,7 @@ public class GitHubAppFactory(IGitHubAppService gitHubAppService, IOptionsSnapsh
     {
         var client = await _cache.GetOrCreateAsync($"github-client-{namedClient}", async entry =>
         {
-            entry.AbsoluteExpiration = DateTimeOffset.Now.AddHours(1);
+            entry.AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(50);
             
             return await GetGitHubClient(namedClient);
         });
