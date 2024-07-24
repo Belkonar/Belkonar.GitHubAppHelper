@@ -21,16 +21,16 @@ public class GitHubAppService(IHttpClientFactory httpFactory) : IGitHubAppServic
     private readonly HttpClient _client = httpFactory.CreateClient("gha");
     public async Task<string> GetInstallationToken(GitHubAppConfig config)
     {
-        if (config.TokenEnvironmentVariable == null)
+        if (config.GitHubAppPem == null)
         {
-            throw new Exception("TokenEnvironmentVariable is required");
+            throw new Exception("GitHubAppPem is required");
         }
 
         byte[] key;
 
         try
         {
-            key = Convert.FromBase64String(Environment.GetEnvironmentVariable(config.TokenEnvironmentVariable) ?? "");
+            key = Convert.FromBase64String(config.GitHubAppPem);
         }
         catch (Exception e) // I realise this pattern gets meme-ed on, but I want to add the extra context.
         {

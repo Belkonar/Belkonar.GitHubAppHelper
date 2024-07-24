@@ -1,7 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using Belkonar.GitHubAppHelper;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 var serviceCollection = new ServiceCollection();
@@ -11,7 +10,7 @@ serviceCollection.AddOptions<GitHubAppConfig>("ghe1")
     {
         config.AppId = "Iv23li8Mao3KnhxD9omf";
         config.GitHubUri = "https://api.github.com";
-        config.TokenEnvironmentVariable = "GITHUB_APP_KEY";
+        config.GitHubAppPem = Environment.GetEnvironmentVariable("GITHUB_APP_PEM");
         config.Organization = "belkonar";
     });
 

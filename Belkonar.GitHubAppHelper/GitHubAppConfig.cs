@@ -5,8 +5,8 @@ public class GitHubAppConfig
 {
     public required string AppId { get; set; }
     public string GitHubUri { get; set; } = "https://api.github.com";
+    public string? GitHubAppPem { get; set; }
     
     public string? Organization { get; set; }
     public string? Repository { get; set; }
-    public string? TokenEnvironmentVariable { get; set; }
 }
