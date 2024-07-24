@@ -18,13 +18,12 @@ serviceCollection.SetupGitHubApp("Deployer/1.0");
 
 var serviceProvider = serviceCollection.BuildServiceProvider();
 
-var gitHubAppService = serviceProvider.GetRequiredService<IGitHubAppFactory>();
+var gitHubAppFactory = serviceProvider.GetRequiredService<IGitHubAppFactory>();
 
-var client = await gitHubAppService.CreateGitHubClient("ghe1");
+var client = await gitHubAppFactory.CreateGitHubClient("ghe1");
 
-var repos = await client.Repository.GetAllForOrg("belkonar");
+var repos = await client.Repository.GetAllForOrg("belkonar") ?? [];
 
-foreach (var repo in repos)
-{
-    Console.WriteLine(repo.Name);
-}
+Console.WriteLine(await gitHubAppFactory.GetInstallationToken("ghe1"));
+
+Console.WriteLine(repos.FirstOrDefault()?.Name ?? "No repos found");

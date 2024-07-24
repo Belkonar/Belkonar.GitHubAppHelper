@@ -7,7 +7,20 @@ namespace Belkonar.GitHubAppHelper;
 
 public interface IGitHubAppFactory
 {
+    /// <summary>
+    /// The primary method of using the factory, this will create a GitHubClient for the named config and
+    /// cache it for 50 minutes.
+    /// </summary>
+    /// <param name="namedClient">Name of an IOptions instance with the config</param>
+    /// <returns>The cached client</returns>
     Task<IGitHubClient> CreateGitHubClient(string namedClient);
+    
+    /// <summary>
+    /// An alternative method for simply pulling a token, this will cache the token for 50 minutes.
+    /// </summary>
+    /// <param name="namedClient">Name of an IOptions instance with the config</param>
+    /// <returns>A JWT token</returns>
+    Task<string> GetInstallationToken(string namedClient);
 }
 
 public class GitHubAppFactory(IGitHubAppService gitHubAppService, IOptionsSnapshot<GitHubAppConfig> optionsSnapshot, string agent) : IGitHubAppFactory
@@ -30,6 +43,25 @@ public class GitHubAppFactory(IGitHubAppService gitHubAppService, IOptionsSnapsh
         }
         
         return client;
+    }
+    
+    public async Task<string> GetInstallationToken(string namedClient)
+    {
+        var token = await _cache.GetOrCreateAsync($"github-token-{namedClient}", async entry =>
+        {
+            entry.AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(50);
+            
+            var config = optionsSnapshot.Get(namedClient);
+            
+            return await gitHubAppService.GetInstallationToken(config);
+        });
+        
+        if (token == null)
+        {
+            throw new Exception("Failed to get token");
+        }
+
+        return token;
     }
     
     private async Task<IGitHubClient> GetGitHubClient(string namedClient)
