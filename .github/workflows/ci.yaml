@@ -1,14 +1,17 @@
 on:
-  push: 
-    branches:
-      - main
+  release:
+    types: [published]
+    
 jobs: 
   build:
     runs-on: ubuntu-latest
+    env:
+      NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8'
           dotnet-quality: 'ga'
-      - run: dotnet --list-sdks
+      - run: |
+          ./release.sh "${{ github.event.release.tag_name }}"
