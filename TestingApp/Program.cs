@@ -11,7 +11,6 @@ serviceCollection.AddOptions<GitHubAppConfig>("ghe1")
         config.AppId = "Iv23li8Mao3KnhxD9omf";
         config.GitHubUri = "https://api.github.com";
         config.GitHubAppPem = Environment.GetEnvironmentVariable("GITHUB_APP_PEM");
-        config.Organization = "belkonar";
     });
 
 serviceCollection.SetupGitHubApp("Deployer/1.0");
@@ -20,10 +19,13 @@ var serviceProvider = serviceCollection.BuildServiceProvider();
 
 var gitHubAppFactory = serviceProvider.GetRequiredService<IGitHubAppFactory>();
 
-var client = gitHubAppFactory.CreateGitHubClient("ghe1");
+var installConfig = new GitHubAppInstallationConfig()
+    { InstallationType = GitHubAppInstallationType.Organization, Name = "belkonar" };
+
+var client = gitHubAppFactory.CreateGitHubClient("ghe1", installConfig);
 
 var repos = await client.Repository.GetAllForOrg("belkonar") ?? [];
 
-Console.WriteLine(await gitHubAppFactory.GetInstallationToken("ghe1"));
+Console.WriteLine(await gitHubAppFactory.GetInstallationToken("ghe1", installConfig));
 
 Console.WriteLine(repos.FirstOrDefault()?.Name ?? "No repos found");

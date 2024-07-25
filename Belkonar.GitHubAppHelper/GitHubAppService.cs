@@ -10,12 +10,12 @@ namespace Belkonar.GitHubAppHelper;
 
 public interface IGitHubAppService
 {
-    Task<string> GetInstallationToken(GitHubAppConfig config);
+    Task<string> GetInstallationToken(GitHubAppConfig config, GitHubAppInstallationConfig installation);
 }
 
 public class GitHubAppService(IHttpClientFactory httpFactory) : IGitHubAppService
 {
-    public async Task<string> GetInstallationToken(GitHubAppConfig config)
+    public async Task<string> GetInstallationToken(GitHubAppConfig config, GitHubAppInstallationConfig installationConfig)
     {
         // Normally I'd put this in a constructor, but the thing using this is basically a singleton.
         var client = httpFactory.CreateClient("gha");
@@ -38,7 +38,7 @@ public class GitHubAppService(IHttpClientFactory httpFactory) : IGitHubAppServic
         
         var jwt = GetJwt(config, key);
         
-        var tokenUrl = await GetTokenUrl(config, jwt, client);
+        var tokenUrl = await GetTokenUrl(config, jwt, client, installationConfig);
         
         return await GetTokenResponse(tokenUrl, jwt, client);
     }
@@ -64,7 +64,7 @@ public class GitHubAppService(IHttpClientFactory httpFactory) : IGitHubAppServic
         return realToken;
     }
     
-    public async Task<string> GetTokenUrl(GitHubAppConfig config, string token, HttpClient client)
+    public async Task<string> GetTokenUrl(GitHubAppConfig config, string token, HttpClient client, GitHubAppInstallationConfig installationConfig)
     {
         using var request = new HttpRequestMessage();
         request.RequestUri = new Uri($"{config.GitHubUri}/app/installations");
@@ -84,14 +84,14 @@ public class GitHubAppService(IHttpClientFactory httpFactory) : IGitHubAppServic
             
             var login = account.GetProperty("login").GetString();
             
-            if (targetType == "Organization" && login?.ToLower() == config.Organization?.ToLower())
+            if (targetType == "Organization" && installationConfig.InstallationType == GitHubAppInstallationType.Organization && login?.ToLower() == installationConfig.Name?.ToLower())
             {
                 tokenUrl = installation.GetProperty("access_tokens_url").GetString();
                 break;
             }
             
             // ReSharper disable once InvertIf // Consistency over all.
-            if (targetType == "Repository" && login?.ToLower() == config.Repository?.ToLower())
+            if (targetType == "Repository" && installationConfig.InstallationType == GitHubAppInstallationType.Repository && login?.ToLower() == installationConfig.Name?.ToLower())
             {
                 tokenUrl = installation.GetProperty("access_tokens_url").GetString();
                 break;

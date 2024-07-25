@@ -5,7 +5,7 @@ using Octokit;
 
 namespace Belkonar.GitHubAppHelper;
 
-public class GitHubAppCredentialStore(IServiceProvider provider, string namedClient) : ICredentialStore
+public class GitHubAppCredentialStore(IServiceProvider provider, string namedClient, GitHubAppInstallationConfig installationConfig) : ICredentialStore
 {
     // This class should only be instantiated once per client, so we can use a single cache.
     // Each client will have its own cache, but that's fine.
@@ -13,7 +13,7 @@ public class GitHubAppCredentialStore(IServiceProvider provider, string namedCli
     
     public async Task<Credentials> GetCredentials()
     {
-        var credentials = await _cache.GetOrCreateAsync($"github-app-token-{namedClient}", async entry =>
+        var credentials = await _cache.GetOrCreateAsync($"github-app-token-{namedClient}-{installationConfig}", async entry =>
         {
             var gitHubAppService = provider.GetRequiredService<IGitHubAppService>();
             var optionsSnapshot = provider.GetRequiredService<IOptionsSnapshot<GitHubAppConfig>>();
@@ -22,7 +22,7 @@ public class GitHubAppCredentialStore(IServiceProvider provider, string namedCli
             
             entry.AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(50);
             
-            var token =  await gitHubAppService.GetInstallationToken(config);
+            var token =  await gitHubAppService.GetInstallationToken(config, installationConfig);
             
             return new Credentials(token, AuthenticationType.Bearer);
         });
