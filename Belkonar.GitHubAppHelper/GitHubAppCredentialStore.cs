@@ -16,7 +16,7 @@ public class GitHubAppCredentialStore(IServiceProvider provider, string namedCli
         var credentials = await _cache.GetOrCreateAsync($"github-app-token-{namedClient}-{installationConfig}", async entry =>
         {
             var gitHubAppService = provider.GetRequiredService<IGitHubAppService>();
-            var optionsSnapshot = provider.GetRequiredService<IOptionsSnapshot<GitHubAppConfig>>();
+            var optionsSnapshot = provider.GetRequiredService<IOptionsMonitor<GitHubAppConfig>>();
             
             var config = optionsSnapshot.Get(namedClient);
             

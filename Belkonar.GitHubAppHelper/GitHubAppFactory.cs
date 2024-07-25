@@ -55,7 +55,7 @@ public class GitHubAppFactory(IServiceProvider provider, string agent) : IGitHub
     public async Task<string> GetInstallationToken(string namedClient, GitHubAppInstallationConfig installationConfig)
     {
         var gitHubAppService = provider.GetRequiredService<IGitHubAppService>();
-        var optionsSnapshot = provider.GetRequiredService<IOptionsSnapshot<GitHubAppConfig>>();
+        var optionsSnapshot = provider.GetRequiredService<IOptionsMonitor<GitHubAppConfig>>();
         
         var token = await _cache.GetOrCreateAsync($"github-token-{namedClient}", async entry =>
         {
