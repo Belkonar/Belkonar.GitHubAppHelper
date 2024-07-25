@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Octokit;
 using Octokit.Internal;
@@ -23,8 +24,10 @@ public interface IGitHubAppFactory
     Task<string> GetInstallationToken(string namedClient);
 }
 
-public class GitHubAppFactory(IGitHubAppService gitHubAppService, IMemoryCache cache, IOptionsSnapshot<GitHubAppConfig> optionsSnapshot, string agent) : IGitHubAppFactory
+public class GitHubAppFactory(IServiceProvider provider, IMemoryCache cache, string agent) : IGitHubAppFactory
 {
+    private ProductHeaderValue? _agentHeader;
+    
     public IGitHubClient CreateGitHubClient(string namedClient)
     {
         return GetGitHubClient(namedClient);
@@ -32,6 +35,9 @@ public class GitHubAppFactory(IGitHubAppService gitHubAppService, IMemoryCache c
     
     public async Task<string> GetInstallationToken(string namedClient)
     {
+        var gitHubAppService = provider.GetRequiredService<IGitHubAppService>();
+        var optionsSnapshot = provider.GetRequiredService<IOptionsSnapshot<GitHubAppConfig>>();
+        
         var token = await cache.GetOrCreateAsync($"github-token-{namedClient}", async entry =>
         {
             entry.AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(50);
@@ -51,14 +57,19 @@ public class GitHubAppFactory(IGitHubAppService gitHubAppService, IMemoryCache c
     
     private IGitHubClient GetGitHubClient(string namedClient)
     {
-        var config = optionsSnapshot.Get(namedClient);
+        if (_agentHeader == null)
+        {
+            var agentParts = agent.Split('/');
+        
+            _agentHeader = agentParts.Length == 2 ? 
+                new ProductHeaderValue(agentParts[0], agentParts[1]) : 
+                new ProductHeaderValue(agent);
+        }
 
-        var agentParts = agent.Split('/');
+        var optionsSnapshot = provider.GetRequiredService<IOptionsSnapshot<GitHubAppConfig>>();
         
-        var productHeaderValue = agentParts.Length == 2 ? 
-            new ProductHeaderValue(agentParts[0], agentParts[1]) : 
-            new ProductHeaderValue(agent);
+        var config = optionsSnapshot.Get(namedClient);
         
-        return new GitHubClient(productHeaderValue, new GitHubAppCredentialStore(gitHubAppService, cache, config));
+        return new GitHubClient(_agentHeader, new GitHubAppCredentialStore(provider, cache, config));
     }
 }

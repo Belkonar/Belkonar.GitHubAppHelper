@@ -20,11 +20,9 @@ public static class GitHubAppExtensions
         
         service.AddSingleton<IGitHubAppFactory>(provider =>
         {
-            var appService = provider.GetRequiredService<IGitHubAppService>();
-            var options = provider.GetRequiredService<IOptionsSnapshot<GitHubAppConfig>>();
             var cache = new MemoryCache(new MemoryCacheOptions());
             
-            return new GitHubAppFactory(appService, cache, options, userAgent);
+            return new GitHubAppFactory(provider, cache, userAgent);
         });
     }
 }
