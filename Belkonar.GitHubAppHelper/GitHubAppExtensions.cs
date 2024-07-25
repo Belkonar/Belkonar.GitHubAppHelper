@@ -22,7 +22,7 @@ public static class GitHubAppExtensions
         {
             var cache = new MemoryCache(new MemoryCacheOptions());
             
-            return new GitHubAppFactory(provider, cache, userAgent);
+            return new GitHubAppFactory(provider, userAgent);
         });
     }
 }

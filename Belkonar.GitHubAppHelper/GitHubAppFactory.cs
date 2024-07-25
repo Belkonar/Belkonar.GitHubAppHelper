@@ -2,7 +2,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Octokit;
-using Octokit.Internal;
 
 namespace Belkonar.GitHubAppHelper;
 
@@ -24,13 +23,31 @@ public interface IGitHubAppFactory
     Task<string> GetInstallationToken(string namedClient);
 }
 
-public class GitHubAppFactory(IServiceProvider provider, IMemoryCache cache, string agent) : IGitHubAppFactory
+public class GitHubAppFactory(IServiceProvider provider, string agent) : IGitHubAppFactory
 {
     private ProductHeaderValue? _agentHeader;
     
+    private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
+    
+    // Reusing the clients *should* be safe since the methods inside are treated as transient instances in the DI.
+    // The clients are cached with a sliding expiration of 2 hours and an absolute expiration of 5 days.
+    // The tokens are cached with an absolute expiration of 50 minutes.
     public IGitHubClient CreateGitHubClient(string namedClient)
     {
-        return GetGitHubClient(namedClient);
+        var client = _cache.GetOrCreate<IGitHubClient>($"github-client-{namedClient}", entry =>
+        {
+            entry.SlidingExpiration = TimeSpan.FromHours(2);
+            entry.AbsoluteExpiration = DateTimeOffset.Now.AddDays(5);
+            
+            return GetGitHubClient(namedClient);
+        });
+        
+        if (client == null)
+        {
+            throw new Exception("Failed to get client");
+        }
+        
+        return client;
     }
     
     public async Task<string> GetInstallationToken(string namedClient)
@@ -38,7 +55,7 @@ public class GitHubAppFactory(IServiceProvider provider, IMemoryCache cache, str
         var gitHubAppService = provider.GetRequiredService<IGitHubAppService>();
         var optionsSnapshot = provider.GetRequiredService<IOptionsSnapshot<GitHubAppConfig>>();
         
-        var token = await cache.GetOrCreateAsync($"github-token-{namedClient}", async entry =>
+        var token = await _cache.GetOrCreateAsync($"github-token-{namedClient}", async entry =>
         {
             entry.AbsoluteExpiration = DateTimeOffset.Now.AddMinutes(50);
             
@@ -55,8 +72,9 @@ public class GitHubAppFactory(IServiceProvider provider, IMemoryCache cache, str
         return token;
     }
     
-    private IGitHubClient GetGitHubClient(string namedClient)
+    private GitHubClient GetGitHubClient(string namedClient)
     {
+        // ReSharper disable once InvertIf // This is more readable
         if (_agentHeader == null)
         {
             var agentParts = agent.Split('/');
@@ -66,10 +84,6 @@ public class GitHubAppFactory(IServiceProvider provider, IMemoryCache cache, str
                 new ProductHeaderValue(agent);
         }
 
-        var optionsSnapshot = provider.GetRequiredService<IOptionsSnapshot<GitHubAppConfig>>();
-        
-        var config = optionsSnapshot.Get(namedClient);
-        
-        return new GitHubClient(_agentHeader, new GitHubAppCredentialStore(provider, cache, config));
+        return new GitHubClient(_agentHeader, new GitHubAppCredentialStore(provider, namedClient));
     }
 }
