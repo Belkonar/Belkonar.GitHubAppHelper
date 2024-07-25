@@ -20,7 +20,7 @@ var serviceProvider = serviceCollection.BuildServiceProvider();
 
 var gitHubAppFactory = serviceProvider.GetRequiredService<IGitHubAppFactory>();
 
-var client = await gitHubAppFactory.CreateGitHubClient("ghe1");
+var client = gitHubAppFactory.CreateGitHubClient("ghe1");
 
 var repos = await client.Repository.GetAllForOrg("belkonar") ?? [];
 

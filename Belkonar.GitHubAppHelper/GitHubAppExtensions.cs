@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -17,12 +18,11 @@ public static class GitHubAppExtensions
 
         service.AddTransient<IGitHubAppService, GitHubAppService>();
         
-        service.AddTransient<IGitHubAppFactory>(provider =>
+        service.AddSingleton<IGitHubAppFactory>(provider =>
         {
-            var appService = provider.GetRequiredService<IGitHubAppService>();
-            var options = provider.GetRequiredService<IOptionsSnapshot<GitHubAppConfig>>();
+            var cache = new MemoryCache(new MemoryCacheOptions());
             
-            return new GitHubAppFactory(appService, options, userAgent);
+            return new GitHubAppFactory(provider, cache, userAgent);
         });
     }
 }
